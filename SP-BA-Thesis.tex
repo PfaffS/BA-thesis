@@ -1,0 +1,813 @@
+% Created 2014-08-28 Do 15:57
+\documentclass{scrartcl}
+
+%\usepackage[latin1]{inputenc}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{fixltx2e}
+\usepackage{graphicx}
+\usepackage{longtable}
+\usepackage{float}
+\usepackage{wrapfig}
+\usepackage{rotating}
+\usepackage[normalem]{ulem}
+\usepackage{amsmath}
+\usepackage{textcomp}
+\usepackage{marvosym}
+\usepackage{wasysym}
+\usepackage{amssymb}
+\usepackage{hyperref}
+\tolerance=1000
+\author{Simon Pfaff}
+\date{\today}
+\title{Weiterentwicklung von Proovread - Optimierung und Implementierung neuer Funktionen für die PacBio Korrektur}
+\hypersetup{
+  pdfkeywords={},
+  pdfsubject={},
+  pdfcreator={Emacs 24.3.1 (Org mode 8.2.6)}}
+\begin{document}
+
+\begin{center}
+\thispagestyle{empty}
+\textbf{\huge Bachelor Thesis}\\[1cm]
+\textbf{\LARGE Weiterentwicklung von Proovread - Optimierung und Implementierung neuer Funktionen für die PacBio Korrektur}\\[1cm]
+{\LARGE Simon Pfaff}\\[2mm]
+\includegraphics[width=.7\linewidth]{//home/s229502/Documents/neuSIEGEL.pdf}
+{\large Julius-Maximillians-Universität Würzburg}\\[3mm]
+{\large Fakultät für Biologie}
+\end{center}
+\cleardoublepage
+\
+\thispagestyle{empty}
+\maketitle
+\begin{center}
+\includegraphics[width=.5\linewidth]{//home/s229502/Documents/neuSIEGEL.pdf}\\[1cm]
+{\large Julius-Maximillians-Universität Würzburg}\\
+{\large Betreuer: Dr. Frank Förster}\\
+{\large Betreuer: Thomas Hackl}\\
+{\large Lehrstuhl für Bioinformatik}
+\setcounter{page}{1}
+\clearpage
+\end{center}
+\tableofcontents
+\clearpage
+\section{Zusammenfassung - Optimierung von Proovread}
+\label{sec-1}
+Heutzutage fällt es nicht mehr schwer, günstig an viele Sequenzdaten heranzukommen. Mit der HISeq2500 von Illumina oder der SMRT von PacBio, ist es 
+möglich viele Daten in kurzer Zeit zu generieren, doch zeigen beide Techniken ihre Nach- und Vorteile. Illumina Daten sind sehr kurze reads, welche aber eine
+sehr geringe Fehlerrate besitzen. PacBio reads hingegen sind relativ lange Reads, welche aber eine sehr hohe Fehlerrate besitzen. Benutzt man aber beide
+Reads gleichzeitig so kann man die Nachteile der beiden Sequenzierarten eliminieren und bekommt lange und fehlerfreie Reads.
+Mit proovread können PacBio reads durch zuhilfe nahme von Illumina Reads korrigiert werden. Proovread korrigiert schon gar nicht schlecht, doch gibt es immer wieder
+Optimierungsbedarf bei solchen Programmen. Damit Proovread besser funktioniert und noch besser korrigiert, werden Teile des Programms neu programmiert und kleine 
+Änderungen daran vorgenommen. So schafft es proovread jetzt auch auf älteren Computern bzw. auf Computern mit älterer Software ohne Fehler zu laufen. 
+Dadurch wird proovread noch einfach zu handhaben, und sollte ohne große Probleme auf jedem handelsüblichen Computer funktionieren. Womit sich PacBio reads 
+effizienter benutzen lassen und endlich ihren Vorteil wirklich zeigen können.
+\clearpage
+
+\section{Absract - Optimization for proovread}
+\label{sec-2}
+Today, it become very easy to get cheap, a huge amount of Sequence data. With the HISeq2500 from Illumina or the SMRT from PacBio (Pacific Biosciences), 
+it is possible to create a mass of data in a really short time, but both sequencing techniques have a positive and a negative side. 
+Illumina data are really short reads, but with a low error rate. PacBio reads are longer but have a really high error rate. 
+If those two techniques can be combined, there can be a use of both positive effects, and there will be long reads with a low error rate. 
+With proovread PacBio reads can be corrected with the help of Illumina reads. Proovread corrects PacBio reads not that bad, but there is always a way to improve 
+such programs. To optimize proovread, some of the subprograms have to be coded new or have to be updated. Now proovread should run, without bigger problems, on 
+all Desktop PCs, also such with an older bash version. With those changes proovread should be more easy to use. With proovread, PacBio reads should be used 
+more efficient, and now they can show their real potential.
+\clearpage
+
+\section{Einleitung}
+\label{sec-3}
+\subsection{Sequenzierung, von damals bis heute}
+\label{sec-3-1}
+Vor einigen Jahren noch, war es nicht einfach Sequenzdaten zu erhalten, die damaligen Sequenzier Techniken waren sehr Teuer und die
+Ausbeute sehr gering. Die Sanger Sequenzierung schaffte es sehr lange Reads zu erzeugen (\textasciitilde{}10 kbp), war aber sehr langsam
+und hatte einen sehr geringen Output und war sehr teuer. Mit der zweiten Generation des Sequenzieren schaffte man es das erste mal viele Sequenzen in kurzer Zeit,
+sowie kostengünstig anzubieten, dies revolutionierte die Biologie. Heutzutage schafft es eine HiSeq2500 in einem Durchlauf eine Menge von 
+600 Gbp zu produzieren. Anders als die traditionelle Sanger Sequenzierung schafft es die Illumina Technik allerdings nicht lange reads zu erzeugen.
+Diese haben eine durchschnittliche Länge von nur 100 bp - 150 bp. Assembler haben ihre Probleme mit diesen kurzen reads, vor allem wenn es
+beim assemblieren um ein großes und repetitives Genom handelt, da diese repetitiven Bereiche schlecht flankiert, bzw. vollständig abgedeckt  
+werden, und besonders viele Reads an diese Bereiche assemblieren. So kann nicht eindeutig festgestellt werden, wie viele Bereiche 
+repetitiv sind, und wie häufig sie im Genom vorkommen und sowohl auch wo genau diese liegen. Somit können speziell diese Bereiche nicht wieder hergestellt werden. 
+Mit dem Beginn der Dritten Generation der Sequenziertechnik schaffte es Pacific Bioscience mit ihren weitaus längeren Reads eine günstige, mit hohem 
+Output, Sequenziertechnik die allmählich mit der Länge von Sanger reads mithalten kann. Der Nachteil an dieser Sequenzier Technik
+die Fehlerrate in diesen Reads. Mit knapp 15\% sind diese im Vergleich zu anderen auf dem Markt verfügbaren Techniken sehr hoch.
+\begin{figure} %[!hb]
+\includegraphics[width=.9\linewidth]{//home/s229502/Documents/rep_prob.png}
+\caption[Probleme beim Assemblieren von repetitiven Genomen]{\textbf{Probleme beim Assemblieren von repetitiven Genomen} Repetitive Sequenzteile sind überrepräsentiert, und können nicht eindeutig assembliert werden. Flankierende Bereiche sind selten, und helfen bei 100 bp Größe nicht sehr um Repetitive Bereiche einzugrenzen.}
+\end{figure}
+
+
+\subsection{PacBio SMRT Vs. Illumina HiSeq2500}
+\label{sec-3-2}
+Stellt man die beiden NGS Methoden gegenüber, so zeigt sich, dass beide Techniken wichtig sind.
+PacBios SMRT produziert lange Reads (\textasciitilde{}8kbp), welche notwendig 
+sind um speziell große und repetitive Genome zu assemblieren. Der Nachteil ist die sehr hohe Fehlerrate, mit der ein assembliertes Genom 
+nicht sehr fehlerhaft und somit unbrauchbar wäre. Die Illumina HiSeq2500 reads haben zwar eine sehr niedrige Fehlerrate (<2\%), sind aber im Durchschnitt nur 100 bp
+lang, und können somit nicht gut assembliert werden. Assembliert man nun nur mit Illumina reads ein Genom, so bekommt man dieses nur sehr fragmentiert. 
+Assembliert man nur mit PacBio reads so wird das Genom viel zu fehlerhaft. 
+Beide Ansätze schaffen es alleine nicht ein gutes Genom Assembly herzustellen.
+Es musste ein Weg gefunden werden wie sich beide Vorteile kombinieren lassen um die Nachteile zu eliminieren. Es gibt Assembler die 
+versuchen beide reads zu kombinieren doch haben diese nur mäßig Erfolg (Allpaths-LG \footnote{Gnerre S., Maccallum I., Przybylski D., Ribeiro F.J., Burton J.N., (2011)
+High-quality draft assemblies of mammalian genomes from massively paallel sequence data. Proc Natl Acad Sci USA}).
+Auch gab es schon Ansätze die Fehlerhaften PacBio Reads zu korrigieren indem die kurzen fehlerfreien Illumina reads verwendet werden (PacBioToCA \footnote{Koren S., et al. (2012) 
+Hybrid error correction and de novo assembly of single-molecule sequencing reads. Nat Biotechnol.} \& LSC \footnote{Au, K.F., Underwood, J.G., Lee, L., and Wong, W.H. (2012).
+Improving pacbio long reads accuracy by short read alignment. PLoS ONE.}). 
+Doch sind die Anforderungen dieser Programme
+meist nur auf sehr speziellen Computern zu bewältigen die sehr hohe Technische Anforderungen erfüllen müssen. Aus diesem Grund wurde
+von Thomas Hackl \footnote{Hackl, T., Hedrich, R., Schultz, J., and Förster, F. (2014).
+proovread: large-scale high accuracy PacBio correction through iterative short read consensus. Bioinformatics} proovread programmiert, ein Programm welches es schafft auch mit Handelsüblichen Computern eine Korrektur an PacBio reads
+vorzunehmen. Mit diesem Programm kann es geschafft werden die Fehlerhaften PacBio reads bis auf 99,9\% accuracy zu bringen. Um zu überprüfen
+wie gut proovread korrigiert hat, wurde das Programm prooveval geschrieben. Mit diesem Programm welches die Korrigierten reads, sowie die roh reads
+mit einem Referenzgenom abgleicht, kann gezeigt werden wie erfolgreich proovread korrigiert.
+
+\subsection{proovread - Verbessern von PacBio reads}
+\label{sec-3-3}
+Proovread ist eine Programm pipeline, welche  es schafft PacBio reads zu korrigieren. 
+Hierzu werden, wie bei bereits ähnlichen Programmen Illumina reads verwendet. Anders als Vorgänger Programme wie LSC oder 
+PacBioToCA, schafft es proovread allerdings die Technischen Anforderungen an den zu verwendeten Computer stark herunter zusetzen und diese auch sehr Variable zu gestalten. 
+Durch diesen Vorteil sollte es jedem möglich sein proovread auch auf einfachen Computern laufen zu lassen. Die Optimale technische Ausstattung für einen Computer 
+mit proovread sind ein 4 Kern Prozessor und 8 Gigabyte RAM. Es läuft aber auch auf Maschinen welche diese Anforderungen nicht erfüllen, hier halt nur Langsamer
+aber ohne das Endergebnis zu beeinflussen. 
+Diese Einsparung an Rechenleistung schafft proovread unter anderem durch sein iteratives Mapping verfahren, mit dem die Illumina reads auf die PacBio reads gemappt werden.
+Dieses Iterative Mapping wird unter anderem durch die zwei neuen Kernprogramme von proovread bewerkstelligt, dem SeqChunker und sam2cns. Werden die Daten iterativ, also
+durch einen wiederholten Prozess,gemapt dann kann, wenn immer andere Illumina Daten verwendet werden ein großer Teil des PacBio reads mit schon kleinen Prozent zahlen abgedeckt werden.
+So werden die im ersten Schritt nur 30\% der Illumina Daten verwendet, dieses 30\% Subset wird durch den SeqChunker on-the-fly erzeugt und an proovread weitergegeben. Das erzeugen 
+dieses Subset benötigt kaum Zeit (wenige Sekunden - siehe \ref{sec-5-4}) würde man diese 30\% durch einen herkömmlichen split oder head Befehl erzeugen würde dies länger dauern.
+Diese 30\% werden nun durch SHRiMP2 auf die PacBio reads gemapt, in dieser Phase (shrimp-pre-1) noch relativ unstrikt, damit viel auf den PacBio reads abgedeckt wird.
+Die hier entstehende SAM Datei wird anschließend an sam2cns gegeben. Sam2cns ist das eigentliche Herzstück von proovread. Es ermöglicht die Korrektur der PacBio reads
+durch berechnen einer Konsensus Sequenz, sowie durch das Maskieren genau dieser Bereiche. Da diese Bereiche bereits korrigiert wurden, ist es nicht mehr nötig weitere 
+Zeit damit zu verschwenden sie im Mapping mit einzubeziehen. Dies führt dazu das die folgenden Mapping schritte mit mehr Illumina reads nicht sehr viel langsamer werden, da 
+weniger PacBio reads zu korrigieren sind. In den folgenden Schritten wird außerdem zunehmend strikter gemappt. Am Ende der drei iterativen Mappings (Standard - 3, individuell
+einstellbar) werden noch einmal alle Illumina reads auf die PacBio reads gemapt (shrimp-finish) um evtl. noch gar nicht berücksichtigte Illumina reads zu verwenden. 
+Sind alle Korrekturen vorgenommen, trimmt proovread alle Stellen heraus welche nicht korrigiert wurden, dies ist notwendig damit keine Fehlerhaften Bereiche mit in evtl. assemblys 
+eingerechnet werden. Dieses trimmen führt aber auch zu einem großen Nachteil, die PacBio reads werden klein geschnitten. Sie verlieren ihren großen Vorteil der Länge. 
+Dieses trimmen kann durch verschiedene Einstellungen Optimiert werden, so dass evtl. nicht ganz so viele Stellen getrimmt werden, und die Länge bei mehreren PacBio reads
+erhalten bleibt. 
+
+\subsection{Verbessern von proovread}
+\label{sec-3-4}
+Korrigierte PacBio Reads sind eine große Chance um große und repetitive Genome sauber zu assemblieren \footnotemark[3]{}. Um aber noch bessere Ergebnisse mit proovread zu Erzielen gilt es 
+dieses zu Optimieren und kleine Fehler zu bereinigen. Für meine Bachelor Thesis werde ich versuchen proovread im Detail, d.h. Quellcode von proovread als auch von Teilhabenden
+Programmen (SeqChunker, Sam2cns, SeqFilter) zu verstehen um herauszufinden wie proovread verbessert werden kann. Welche Einstellungen ein besseres Ergebnis liefern. Als auch versuchen
+eigene Ideen einzubringen und Teil Programme zu schreiben die für proovread sinnvoll sind. So gibt es noch ein paar kleine Fehler in den bisher vorhanden Versionen, als auch
+mit dem SeqChunker, welche gefunden werden müssen und bereinigt werden sollen. Außerdem soll proovread auch auf großen Daten, wie Dionaea muscipula (Venus Fliegenfalle), getestet 
+werden. 
+
+\section{Methods and Material}
+\label{sec-4}
+\subsection{Data types}
+\label{sec-4-1}
+\subsubsection{FASTA - FASTQ}
+\label{sec-4-1-1}
+FASTA ist ein Datentyp, welcher Sequenzinformation von Proteinen oder Nucleotiden enthält. Die Datei enthält unter anderem
+die ID sowie eine kurze Information über diese. Es gibt zwei Arten von FASTA Formate. Die single- und die multiline FASTA.
+In der multiline Fasta stehen in jeder Zeile maximal 80 Zeichen, danach erfolgt ein Zeilenumbruch. In der singleline FASTA
+steht in jeder Zeile eine Sequenz, also ID - Information - Sequenz, direkt hintereinander, getrennt durch ein Leerzeichen.
+Jede neue FASTA Sequenz wird mit einem größerzeichen ">" eingeleitet. 
+FASTQ ist eine erweiterte Form der FASTA, das Q steht für Quality, dem neuen Extra der FASTQ. Zusätzlich zu den auch schon in FASTA
+enthalten Informationen, wird in FASTQ zu jeder Base eine Qualität angegeben. Diese entspricht einer Prozentzahl, welche die Fehlerrate angibt.
+Da aber aus Zugehörigkeits gründen unter jeder Base eine Qualität stehen soll, muss die Qualität codiert werden sodass nur noch ein Buchstabe zu sehen ist.
+Dies geschieht durch die Codierung in ASCII. Es gibt zwei Codierungen welche, standardmäßig verwendet werden. +33 und +64. Beide codieren die Qualität in Buchstaben bzw. 
+Zahlen. In der +33 Codierung werden die ASCII Zeichen von ! bis I verwendet, in der +64 Codierung von @ bis i. Aufgrund dieser Qualität gibt es FASTQ nur in mehreren Zeilen.
+Zwischen Sequenz und Qualität steht eine Trennzeile mit einem einzelnen "+". Jede Sequenz wird im FASTQ mit einem "@" eingeleitet. 
+
+\subsubsection{SAM - BAM}
+\label{sec-4-1-2}
+SAM (sequence alignment/Map) und BAM (binary alignment/MAP) \footnote{\url{http://samtools.github.io/hts-specs/SAMv1.pdf}} sind beides Dateiformate zur Speicherung von Alignments. Der Unterschied
+zwischen diesen beiden ist, dass im BAM Format nur eine binäre Speicherform benutzt wird, um Speicherplatz zu sparen.
+
+\subsubsection{Cigar Strings}
+\label{sec-4-1-3}
+CIGAR Strings sind teile von SAM und BAM Dateien. Sie geben in einer kurzen Zeichenkette wieder, wie die Sequenz auf die Referenz aligniert hat.
+Ein CIGAR String könnte wie folgt aussehen: "500M3D34M4I2D400M", M steht Match, und gibt an wie viele Basen passend aligniert haben. D steht für
+deletion und gibt an wie viele Basen in der Sequenz fehlen. I steht für Insertion, und gibt an wie viele Basen in der Sequenz zu viel sind. 
+Die Nummer für dem jeweiligen Buchstaben gibt die Anzahl an.
+
+\subsubsection{BED/COV}
+\label{sec-4-1-4}
+BED oder COV Dateien, werden dazu verwendet um die Coverage von Mappings darzustellen. Hierzu wird an jeder Base die Coverage gezählt.
+
+\subsection{NGS}
+\label{sec-4-2}
+\subsubsection{Illumina - HISeq2500}
+\label{sec-4-2-1}
+Die HISeq2500 ist ein Illumina Sequenzierer, die durchschnittliche Größe der Output Reads liegt zwischen 100 bp und 150 bp.
+Die größt möglichen Reads sind 300 bp lang. Die Reads haben eine sehr hohe Qualität und somit eine sehr geringe Fehlerrate (<3\%).
+Der Nachteil an dieser Sequenziermaschine ist, dass nur diese kurzen Reads entstehen. Speziell für große, komplizierte Genome ist dies 
+ein Problem, da mit diesen kurzen Reads viele repetitive Sequenzen schlecht flankiert werden können, und somit nicht eindeutig zu bestimmen ist
+wie häufig solche Sequenzen vorkommen und wie lang bzw. wie groß diese sind.
+
+
+\subsubsection{PacBio - SMRT}
+\label{sec-4-2-2}
+Die SMRT (single molecule real time sequencing) ist eine Sequenziertechnik der Firma PacBio (Pacific Biosience).
+Mit diesem Sequenzer ist es mögliche lange reads zu erzeugen, welche im Schnitt 8 kbp groß sind. Die Maximalgröße 
+beträgt 30 kbp Reads. Der Nachteil an dieser Sequenziertechnik ist, dass diese wenn auch langen reads, sehr fehlerhaft sind (15\% error rate).
+Dieser Fehler beruht auf dem Chemischen Ablauf der Sequenzierung. Es gibt mittlerweile, Assembler die diese Fehlerrate korrigieren können, doch
+funktionieren diese nicht immer gut. Auch gibt es mittlerweile eine kleine Auswahl an Programmen welche diese PacBio Reads korrigieren können.
+
+
+\subsection{Verwendete Programme}
+\label{sec-4-3}
+\subsubsection{SHRiMP2}
+\label{sec-4-3-1}
+SHRiMP2 \footnote{Rumble, S. M., Lacroute, P., Dalca, A. V., Fiume, M., Sidow, A., and Brudno, M. (2009). 
+SHRiMP: Accurate Mapping of Short Color-space Reads.} ist ein Alignment Programm, welches vorzugsweise dazu verwendet wird kurze ( \textasciitilde{} 100 bp) reads zu mappen. 
+SHRiMP2 ist jener Mapper welcher als Standard Mapper in proovread verwendet wird.
+\subsubsection{gmap}
+\label{sec-4-3-2}
+gmap \footnote{Wu, T. D., and Watanabe, C. K. (2005).
+GMAP: a genomic mapping and alignment program for mRNA and EST sequences. Bioinformatics} \textsuperscript{,}\,\footnote{Wu, T. D., and Nacu, S. (2010).
+Fast and SNP-tolerant detection of complex variants and splicing in short reads. Bioinformatics} ist ein Alignment Programm, welches mit auch mit Größeren reads ( \textasciitilde{}8 kbp) gut Alignments berechnen kann. 
+\subsubsection{SeqFilter}
+\label{sec-4-3-3}
+Der SeqFilter ist ein kleines Programm, welches in der proovread pipeline verwendet wird. Es wurde geschrieben von Hackel, T., und 
+hat verschiedenste Anwendungszwecke. So kann es z.B. einzelne Sequenzen, wenn die ID bekannt ist, aus einer Datei ziehen. Es teilt die Datei in 
+kleinere gleichgroße Dateien auf. Es kann aber auch den Anteil von Basen, etc. berechnen.  
+\subsubsection{Emacs}
+\label{sec-4-3-4}
+Emacs \footnote{www.gnu.org/software/emacs/} ist ein Text Editor und Emacs lisp interpreter (lisp programmier Dialekt).
+Es ist eine kostenlose Software und kann durch viele add-ons angepasst werden. So gibt es u.a. Projekt Planer, Kalender, Debugger, Rechtschreibprüfung, und vieles mehr.
+
+\subsubsection{IGV}
+\label{sec-4-3-5}
+IGV\footnote{Thorvaldsdóttir, H., Robinson, J. T., and Mesirov, J. P. (2012).
+Integrative Genomics Viewer (IGV): high-performance genomics data visualization and exploration. Bioinformatics}\textsuperscript{,}\,\footnote{Robinson, J. T., Thorvaldsdóttir, H., Winckler, W., Guttman, M., Lander, S.E., Getz, G., and Mesirov, J. P. (2011). 
+Integrative Genomics Viewer. Nature Biotechnology} (Intergrative Genomics Viewer) ist ein Programm, mit dem Genom Daten, sowie Alignments angeschaut werden können
+\subsubsection{FLASH}
+\label{sec-4-3-6}
+FLASH \footnote{Magoc, T., and Salzberg, S. (2011).
+FLASH: Fast length adjustment of short reads to improve genome assemblies. Bioinformatics} (Fast Length Adjustment of SHort reads) ist ein Programm, welches short Reads zusammenbauen kann. Hier werden immer zwei passende 
+short Reads gesucht, um diese mit einem überlapp von \textasciitilde{}5 - 10 Basen zu einem short Read zusammen zu bauen. Hiermit vergrößert sich die Abdeckung
+der kurzen short Reads.
+
+\clearpage
+\subsection{Verwendete Datensätze}
+\label{sec-4-4}
+\subsubsection{Arabidopsis thaliana}
+\label{sec-4-4-1}
+\begin{table}[!ht]
+\caption[Verwendete Datensätze von A.thaliana]{\textbf{Verwendete Datensätze von A.thaliana} }
+\begin{center}
+\begin{tabular}{lrrr}
+Arabidopsis thaliana & PacBio reads & Illumina reads & Illumina reads\\
+ &  & trimmed - Set 1 & trimmed - Set 2\\
+\hline
+Sequenzen        [ \#] & 1466 & 28749668 & 28749668\\
+Insgesamt        [bp] & 8333393 & 2794748179 & 2846732514\\
+Längster Read    [bp] & 23981 & 110 & 110\\
+Kürzester Read   [bp] & 65 & 50 & 50\\
+N50              [bp] & 8449 & 110 & 110\\
+N90              [bp] & 3225 & 76 & 79\\
+\end{tabular}
+\end{center}
+\end{table}
+
+\subsubsection{Dionaea muscipula}
+\label{sec-4-4-2}
+\begin{table}[!ht]
+\caption[Verwendete Datensätze von D.muscipula]{\textbf{Verwendete Datensätze von D.muscipula}}
+\begin{center}
+\begin{tabular}{lrrr}
+Dionaea muscipula & PacBio reads & Illumina reads & Illumina reads\\
+ &  & trimmed - 19$_{\text{1}}$ & trimmed -  19$_{\text{2}}$\\
+\hline
+Sequenzen        [ \#] & 5687189 & 76537195 & 76537195\\
+Insgesamt        [bp] & 14912055601 & 7584573949 & 7560928597\\
+Längster Read    [bp] & 23733 & 100 & 100\\
+Kürzester Read   [bp] & 50 & 75 & 75\\
+N50              [bp] & 3560 & 100 & 100\\
+N90              [bp] & 1490 & 100 & 99\\
+\end{tabular}
+\end{center}
+\end{table}
+
+\begin{table}[!ht]
+\caption[Verwendete Datensätze von D.muscipula]{\textbf{Verwendete Datensätze von D.muscipula}}
+\begin{center}
+\begin{tabular}{lrrrr}
+Dionaea muscipula & Illumina reads & Illumina reads & Illumina reads & Illumina reads\\
+ & trimmed - 20$_{\text{1}}$ & trimmed - 20$_{\text{2}}$ & trimmed - 21$_{\text{1}}$ & trimmed - 21$_{\text{2}}$\\
+\hline
+Sequenzen        [ \#] & 73141684 & 73141684 & 93450264 & 93450264\\
+Insgesamt        [bp] & 7250065851 & 7226430829 & 9146614827 & 9184917381\\
+Längster Read    [bp] & 100 & 100 & 100 & 100\\
+Kürzester Read   [bp] & 75 & 75 & 75 & 75\\
+N50              [bp] & 100 & 100 & 100 & 100\\
+N90              [bp] & 100 & 99 & 93 & 95\\
+\end{tabular}
+\end{center}
+\end{table}
+\clearpage
+
+\section{SeqChunker}
+\label{sec-5}
+\subsection{Was ist der SeqChunker?}
+\label{sec-5-1}
+Der SeqChunker ist ein wichtiger Bestandteil der proovread Pipeline. Der SeqChunker wird 
+dazu benötigt die Sets an short Read Daten für proovread schnell vorzubereiten und weiterzugeben.
+Ein Problem beim benutzen von großen short Read Daten ist, dass ein großer
+Rechenaufwand betrieben werden muss um diese Daten zu laden. Auch steht hinter diesem Programm der 
+Gedanke das mit wenig Aufwand viel erreicht werden kann. Angenommen die PacBio Daten werden mit einem
+short Read Set korrigiert welches 50x Coverage hat, so kann theoretisch mit bereits 10\% von diesem Set 
+das komplette Genom 5x abgedeckt werden, dass dies in Wirklichkeit nicht der Fall ist, zeigt sich immer 
+wieder. Dennoch wird beim iterativen Mappen von proovread immer nur Teile des short Read Sets gezogen 
+und verwendet. Grund hierfür ist dass im ersten Mapping Prozess schon mit 10\% vielleicht sogar schon 40\% der Daten
+korrigiert werden kann, diese können dann in den restlichen Durchläufen ignoriert werden und somit wird viel 
+Zeit eingespart.
+\begin{figure}
+\includegraphics[width=.9\linewidth]{//home/s229502/Documents/Korrektur10.png}
+\caption[Korrektur mit 10\% der Illumina Daten]{\textbf{Korrektur mit 10\% der Illumina Daten} Schon wenige Prozent, z.B. 10\% können zu einer Korrektur von z.B. 80\% führen. So können beim Iterativen Mapping schon in den ersten Schritten viel der Sequenz abgedeckt werden.}
+\end{figure}
+
+\begin{figure}
+\includegraphics[width=.9\linewidth]{//home/s229502/Documents/SeqChunker.png}
+\caption[Schemazeichnung: Arten um Subsets zu erzeugen]{\textbf{Schemazeichnung: Arten um Subsets zu erzeugen} Verschiedene Arten um ein Subset zu erzeugen, um nicht eine zu Große Datenmenge auf einmal zu mappen, notwendig um Subsets für iteratives Mapping zu erzeugen.}
+\end{figure}
+
+Der einfachste Weg 10\% der short Read Daten aus dem Set zu bekommen wäre einfach die ersten 10\% der Daten
+zu verwenden, hier könnte die Dateigröße genommen werden und mit einem einfachen "head" Befehl die ersten 
+10\% gezogen werden. Dies ist zum einen aber langsam, da jede Zeile dazu verwertet werden muss.
+Zum anderen kann nicht mit Sicherheit gesagt werden ob nicht eine ungleichmäßige Verteilung vorliegt, und 
+am Anfang der Datei evtl. nur kurze Reads liegen. Also wäre eine zufällige Verteilung des Subsets 
+anzustreben. Es könnte mit einem "rand" Befehl (zufälliges ziehen / random) zufällig Sequenzen gezogen werden. Aber auch hier besteht 
+der Nachteil das immer für jede Zeile, bzw. für immer vier Zeilen entschieden werden muss ob sie gezogen wird
+oder nicht, und somit jede Zeile angeschaut werden muss. Dies benötigt Speicher und vor allem viel Zeit. 
+Der SeqChunker hingegen kopiert mit einem ganz einfach "dd" (Data Description) Befehl erst einmal, die Sequenzen in verschiedene
+Blöcke. Dieser "dd" Befehl geht nicht durch die Datei und verwertet Zeile für Zeile, dieser Befehl
+kopiert in einem sehr niedrigen datenlevel nur Bytes, ohne auch nur zu wissen was. Diese Blöcke werden
+nun in den SeqChunker verwertet, hierzu wird in jedem Block geschaut ob diese mit einer Sequenz anfängt 
+wenn nicht wird dieser Block dementsprechend angepasst. Sowie am ende jedes Blockes geschaut wird ob die letzte
+Sequenz auch vollständig ist, wenn nicht wird der Block dementsprechend verlängert. Dies spart viel Zeit da nur noch 
+das Ende und der Anfang jedes Blocken ausgewertet muss. Hinzu kommt eine Reproduzierbarkeit, da bei gleichen
+Einstellungen, immer wieder die gleichen Sequenzen gezogen werden, dies bedeutet aber auch das es keine zufälligen
+Sequenzen sind, da aber mit den vorhanden Einstellungsmöglichkeiten aus allen teilen der Datei Sequenzen gezogen werden
+kann sichergestellt werden dass eine evtl. vorhandene ungleichmäßige Verteilung nicht unterstützt wird. 
+Der SeqChunker wird verwendet um ohne Zwischenspeicherung von Dateien, sowie ohne das zuschütten des RAMs, 
+"on-the-fly" die Sequenzen an proovread weiterzugeben. Es werden also keine temporären Dateien erstellt, welche
+einen großen freien Festplattenspeicher voraussetzten. Der SeqChunker liest von STDIN und gibt nach STDOUT aus, er kann
+also auch alleinstehend verwendet werden, ohne proovread. So könnten die erzeugten Subsets, welche proovread in den einzelnen
+iterativen Mappings verwendet, noch einmal genauer untersucht werden können, falls es zu Problemen mit den Sequenzen kommt.
+
+
+\subsection{Probleme mit dem SeqChunker}
+\label{sec-5-2}
+Der vorhandene SeqChunker allerdings funktioniert nur auf Bash Versionen die neuer sind als V4.0, da es in älteren Versionen
+ein Problem mit dem Filehandling mit dem "dd" Befehl gibt. Das updaten auf Bash Version V4.0 oder neuer ist auf 
+häufig gewarteten und sich regelmäßig updatenden Systemen kein Problem. Doch bei Großrechenanlagen wie unter anderem
+das LRZ in München, auf dem viele verschiedene Personen mit vielen verschiedenen Anforderungen rechnen, kann so ein 
+regelmäßiges update nicht vorgenommen werden. Da sonnst die Gefahr bestünde das zum einen eine zu große downtime der Rechenanlagen besteht.
+Zum anderen müssten alle Anwender ständig ihre Kompatibilität mit den vorhanden Versionen sicherstellen. Im LRZ wird daher auf einer weitaus 
+älteren Version gearbeitet. Für diese Version ist dann auch sichergestellt dass sie ohne Probleme läuft.
+Um nun auf solchen Großrechenanlagen zu rechnen muss der SeqChunker von proovread also auch unter älteren Bashversionen 
+arbeiten. Hierzu wurde ein SeqChunker geschrieben welcher verwendet wird, wenn auf einer Bashversion älter als V4.0 
+gearbeitet wird. Hierzu wird der "sed" Befehl verwendet. Der "sed" Befehl ist ein relativ alter Bash Befehl und somit 
+unter fast allen älteren Versionen benutzbar. Dieser SeqChunker.sed-only hat fast alle Vorteile des alten SeqChunker, er kann
+über die Konfigurations Datei von proovread gesteuert werden. Er beruht auf einem ähnlichen Prinzip, die Sequenzen 
+werden überprüft und dann in Blöcke an proovread weitergegeben. Da der "dd" Befehl aber nicht funktioniert muss der SeqChunker.sed-only
+aber auch wieder die komplette Datei durchgehen, zwar geht dies mit dem "sed" Befehl schnell dennoch ist der SeqChunker.sed-only
+langsamer als der normal verwendete. 
+
+\subsection{SeqChunker.sed-only, eine Notfallvariante für proovread}
+\label{sec-5-3}
+Um zu verstehen wie der SeqChunker.sed-only programmiert ist, gilt es zunächst den "sed"-Befehl zu verstehen. Der "sed"-Befehl ist eine 
+sehr frühe suchoption in der Unix Shell, er ist deshalb einer der ersten Befehle welche mit einer Such Vorlage (Search Pattern) umgehen kann.
+Dies wird auch benötigt um die einzelnen Sequenzen wirklich zu suchen. Der "sed"-Befehl ist wie folgt aufgebaut:
+sed [Option] \{script-only-if-no-other-script\} [input-file], sed kann unter anderem auch Skripte laden welche ihm Optionen geben. Es 
+ist also nicht notwendig Optionen im Aufruf selbst zu schreiben. Der "sed"-Befehl durchsucht Dateien zeilenweise, es wird 
+also nicht viel RAM verbraucht, allerdings ist dies auch ein Nachteil, da er damit langsamer arbeitet. 
+Die Filterung der Sequenzen im SeqChunker.sed-only beruht nur auf dem "sed"-Befehl. Er kann nicht nur durch Dateien gehen und Sequenzen
+suchen, dies würde ein "grep"-Befehl auch tun. Der Vorteil nun an sed ist, dass durch die große Auswahl an Optionen, die Möglichkeit gegeben wird
+immer vier Zeilen gebündelt auszugeben. Dies ist wichtig, da in einer FASTQ-Datei eine Sequenz immer aus vier Zeilen besteht. Worin auch der 
+nächste Nachteil des SeqChunker.sed-only ersichtlich wird, er funktioniert nur mit FASTQ-Dateien und nicht mit 
+FASTA-Dateien. Der SeqChunker.sed-only wandelt zuerst die Optionen, welche im Normalfall der normale SeqChunker bekommt um, damit es für 
+den "sed"-Befehl verwendet kann. So wird berechnet wie viele Sequenzen benötigt werden um z.B. \textasciitilde{}30\% der Sequenzen zu bekommen.
+So wird bei 30\% der Sequenzen, nur jede 3 Sequenz herausgegeben um dann auf \textasciitilde{}30\% (33,33\%) zu kommen. Bei \textasciitilde{}60\% würden dann
+alle drei Sequenzen immer zwei Sequenzen ausgegeben werden, also anstatt vier Zeilen acht Zeilen, um somit 60\% (66,66\%) zu erhalten.
+Auch kann man dem SeqChunker.sed-only sagen wie viele Sequenzen er ausgegeben soll, wenn man genau weiß wie viele Sequenzen denn verwendet 
+werden sollen. 
+Um zu entscheiden welcher SeqChunker verwendet wird, wurde der vorhandene SeqChunker in SeqChunker.chunk umbenannt und ein Zwischenprogramm
+mit dem Namen SeqChunker erstellt, dieses Zwischenprogramm überprüft welche Bashversion vorhanden ist und entscheidet dann welcher SeqChunker 
+verwendet wird, dies hat den Vorteil das nichts im Proovread Quellcode geändert werden musste, da ganz normal das Programm mit den Namen
+SeqChunker aufgerufen wird. Ein weiterer Vorteil ist der, dass wenn weitere Anpassungen, wie ein noch besserer SeqChunker geschrieben wird, er einfach
+eingebaut werden kann indem er durch das Zwischenprogramm "SeqChunker" aufgerufen wird. Ein Nachteil an dieser Lösung ist, dass nicht eine, sondern zwei 
+weitere Dateien im Programm verwendet werden, mit denen sich ein Nutzer evtl. auseinander setzten muss, wenn er proovread nicht nur verwenden sondern auch
+komplett verstehen will.
+
+\subsection{SeqChunker.chunk / SeqChunker.sed-only, Laufzeit im Vergleich}
+\label{sec-5-4}
+\begin{figure}
+\includegraphics[width=.9\linewidth]{//home/s229502/Documents/runtimeplot.png}
+\caption[Runtimeplot: Geschwindigkeitsvergleich der verschieden Methoden, Subsets zu erzeugen.]{\textbf{Runtimeplot: Geschwindigkeitsvergleich der verschieden Methoden, Subsets zu erzeugen.} Vergleich der Geschwindigkeiten der Verschiedenen Methoden Subsets zu erzeugen, Schnellste: SeqChunker.chunk mit 12 Sekunden, Langsamste: Perlscript 3 Minuten}
+\end{figure}
+
+Um den Zeitgewinn durch den SeqChunker zu verdeutlichen werden die Laufzeiten der verschiedenen Möglichkeiten, Sequenzen aus einer Datei zu ziehen, gegeneinander
+verglichen. Hierzu wurde ein Set an Illumina Daten von A.Thaliana verwendet, welche 2,79 Gbp enthält. Die Fragmentierung Rate beträgt 30\%.
+Wie am Plot zu sehen ist, ist dass ziehen mit "head" zwar zeitlich gesehen eine schnelle Möglichkeit mit 37 Sekunden. Dennoch ist sie aufgrund des evtl. in 
+der Datei vorhandenen ungleichen Verteilung, nicht die beste Wahl. Zudem immer nur die ersten bzw. mit "tail" die letzten Sequenzen der Datei ausgegeben werden, und 
+somit Sequenzen in der Mitte der Datei gar nicht benutzt werden. Mit einem Skript in Perl, welches die Datei durchmischt und dann aufsplittet, dauert dieser Vorgang 
+gut 3 Minuten. Also eine sehr langsame Möglichkeit, welche zwar zufällige Sequenzen liefert, aber somit auch nicht reproduzierbar ist. Mit dem SeqChunker.chunk, welcher den 
+dd Befehl benutzt, dauert das ziehen von 30\% der Sequenzen nur 12 Sekunden. Mit dem SeqChunker.sed-only dauert dies ca. 50 Sekunden. Es zeigt sich, dass der SeqChunker.sed-only
+um einiges langsamer ist als der normal verwendete SeqChunker. Dennoch ist er mehr als dreimal schneller als ein Perl Skript welches zufällig Sequenzen zieht.
+
+
+
+
+\clearpage
+\section{Das Problem mit großen, komplizierten Datensätzen}
+\label{sec-6}
+\subsection{Große Datensätze, heterozygot - repetitiv}
+\label{sec-6-1}
+Komplizierte, und große Genome zeigen häufig eine große Anzahl an repetitiven Sequenzen. Dies stellt ein Problem da, da diese Stellen nicht einwandfrei wieder 
+zusammen assembliert werden können. Meist werden diese repetitiven Stellen gar nicht assembliert oder zu schlecht, da nicht genau bestimmt werden kann wie groß diese sind, und wo 
+genau sie im Genom lokalisiert sind. Hier können PacBio reads helfen, sie Flankieren oder überdecken solche Repetitiven Bereiche besser als Illumina Reads. 
+Wodurch diese besser assembliert werden können. 
+Am Beispiel Dionaea muscipula wird versucht ein sehr heterozygotes, repetitives sowie sehr großes (3 Gbp) Genom zu assemblieren. Doch bevor dies geschieht müssen
+die vorhanden PacBio Daten von proovread korrigiert werden. 
+
+\subsection{Das 3 Gbp Genom}
+\label{sec-6-2}
+Das Problem des erstellen eines vollständigen Dionaea Genom ist, dass es ein großes sowie sehr repetitives Genom ist. Es wird von einer Genomgröße 
+von ca. 3 Gbp (Giga Basen paare) ausgegangen. Dies entspricht etwa der Genomgröße des Homo sapiens sapiens (Mensch). Dazu kommt dass es sehr viele repetitive
+Bereiche vorweist, was es noch schwieriger zu assemblieren macht. Um das Genom von Dionaea zu assemblieren sind also kurze Illumina reads (100 bp - 150 bp)
+eher ungeeignet, da diese schlecht repetitive Bereiche abdecken können. Hier eignen sich große (\textasciitilde{}8 kbp) PacBio reads um einiges besser. Da diese aber zu fehlerhaft
+sind gilt es diese erst mit proovread zu korrigieren. 
+Proovread hat keine großen technischen Anforderungen und könnte somit auch auf jedem Standard PC laufen, optimal nutzt proovread vier Kerne und acht Gigabyte RAM.
+Es könnte also problemlos auch mit großen Daten wie Dionaea auf dem Bioinformatik Cluster (Uni Würzburg) gerechnet werden. Allerdings würde dies viel Zeit in Anspruch 
+nehmen und die Maschinen für mehrere Tage oder Wochen belegen. Um dies vorzubeugen werden die Daten auf dem LRZ in München gerechnet. Hier gibt es einen großen 
+Cluster von vielen kleinen Rechenmaschinen. Da proovread gut parallelisierbar ist, kann dies genutzt werden um Rechenzeit zu sparen. Ein Nachteil am LRZ sind 
+veraltete Versionen von Bash und Lib. Sowie die Laufzeitbegrenzung für jeden einzelnen Job. 
+Bisher wurden die Dionaea Daten normalisiert um auf dem LRZ berechnet zu werden. Hierzu wurden Khmere erstellt und verwendet, dies hat allerdings den Nachteil
+das viele Informationen verloren gehen. Zwar dient dies dazu den großen Anteil an Repetitiven Sequenzen zu verringern, doch sollte dieser auch nicht zu niedrig sein, da
+sonnst nicht richtig assembliert werden kann. Durch diese Khmere wurde der Datensatz auf gut 25\% des vorherigen Volumens verkleinert und somit die Laufzeit enorm
+verringert.  
+
+\subsection{Unnormalisierte Daten, und das Laufzeitproblem}
+\label{sec-6-3}
+Um zu testen wie sich unnormalisierte Daten bei der Korrektur verhalten und welchen Einfluss dies auf die Laufzeit von proovread hat, wurde zuerst ein
+Testset aus den PacBio reads erstellt. Es wurden die längsten Reads genommen und Sets aus 2 mbp, 5 mbp, und 10 mbp mit Hilfe des SeqFilters gezogen. 
+Dazu wurden verschiedene Sets an short reads verwendet um zu Testen wie diese Korrigieren, ein Set aus 100 bp und 150 bp reads, ein Set aus kombinierten
+150 bp und 100 bp flashed reads und ein Set nur aus 100 bp reads, da bekannt ist das SHRiMP2 mit zu großen short Reads Größen nicht gut umgehen kann.
+Geflashede Daten können SHRiMP2 zwar Probleme bereiten doch können gerade bei einem repetitiven Genom wie Dionaea einen großen Vorteil bringen. Flashed
+bedeutet, dass immer zwei short reads mit einem kurzen überlapp von max 5 - 10 Basen zusammengebaut werden, so entstehen längere short Reads. Diese können 
+einen größeren Bereich überdecken und somit evtl. Bereiche abdecken, an welche sonnst keine reads mappen würden da diese zu fehlerhaft sind.
+Um die 100 bp und 150 bp short reads zu flashen wurde das Programm FLASH \footnotemark[12]{} verwendet
+Um eine gute Korrektur zu erhalten müssen so viele short reads verwendet werden das gut eine 50x Abdeckung (Coverage) erreicht wird. Um zu testen wie viel
+Coverage in den short Reads Sets vorhanden sind, gilt es eine Kmer Analyse durchzuführen. Hierzu wird das Programm Jellyfish \footnote{Marcais G., and Kingsford C. (2011)
+A fast, lock-free approach for efficient parallel counting of occurrences of k-mers. Bioinformatics
+
+\clearpage} verwendet. Es splitet die 
+short Reads in Kmer und zählt diese. Bei einer angenommenen Genomgröße von 3 Gbp sollten also Minimum 150 Gbp short reads verwendet werden um eine 
+gute Korrektur zu erreichen. 
+\begin{figure}
+\includegraphics[width=.9\linewidth]{//home/s229502/Desktop/s229502/kmer-trimmed.pdf}
+\caption[Kmer Analyse der 100 bp und 150 bp Reads]{\textbf{Kmer Analyse der 100 bp und 150 bp Reads,} Die Kmer Analyse für den kombinierten Datensatz aus getrimmten 100 bp und 150 bp short reads zeigt ein Maximum bei ca 100x Coverage.}
+\end{figure}
+Es zeigt sich an dieser Kmer Verteilung wie kompliziert dieser Datensatz ist, der Peak aus fehlerhaften kmer reads, also Kmer die aus fehlerhaften reads 
+erzeugt wurden, und somit eher selten vorkommen sollten. Da es auf diesen Kmers (19 mere) eine oder zwei Basen falsch sind, gibt es sehr viele Verschiedene davon. 
+Somit sammeln sich diese Fehlerhaften Kmere
+am Anfang der Analyse, da selten der gleiche Fehler mehrmals vorkommt, im Normalfall sollten diese Fehlerhaften Kmere nur einen geringen Teil der Kmere ausmachen. 
+Doch zeigt dieser Datensatz so viele Fehler, 
+dass diese Kmere einen Großteil der Fehler ausmachen, welche sogar das eigentliche Coverage Maximum fast überdecken.
+
+\begin{figure}
+\includegraphics[width=.9\linewidth]{//home/s229502/Desktop/s229502/kmer_flashed-only.pdf}
+\caption[Kmer Analyse der flashed Reads]{\textbf{Kmer Analyse der flashed Reads,} Die Kmer Analyse der geflasheden reads zeigt das Maximum bei einer Coverage von etwa 70x.}
+\end{figure}
+
+Der kombinierte Datensatz aus 100 bp und 150 bp Reads zeigt bei allen drei Test Sets eine Laufzeit, welche größer ist als 20 Tage, dies ist
+ein Problem, da dies die maximal erlaubt Laufzeit auf den LRZ Rechnern ist. D.h. keiner der Jobs ist mit unnormalisierten Daten fertig geworden. 
+Das Testset mit 2 Mb kommt in den 20 Tagen Laufzeit, bis in die dritte Iteration des Mappings, und kann bis hier hin acht von zwölf 
+short Reads Dateien bearbeiten. Das 5 Mb Testset schafft es bis in die zweite Iteration und hier zehn von zwölf Dateien. Das größte 
+Set mit 10 Mb endet noch in der ersten Iteration bei Datei zwölf von zwölf. Hierbei zeigt sich dass selbst bei einem sehr verkleinerten
+Datensatz der PacBio reads auf 2 Mb, unnormalisierte Daten zu groß sind um effektiv in kurzer Zeit gemappt zu werden. 
+Bei den geflasheden Daten zeigt sich ein ähnliches Ergebnis, nur das hier keiner der Datensätze über die zweite Iteration hinaus kam, bevor die
+20 Tage erreicht wurden. Eine genaue Auswertung der Flashed Daten kann leider aufgrund eines Datenverlustes am LRZ nicht vorgenommen werden.
+Ein Problem mit diesen Datensätzen sind die größeren 150 bp short Reads. Bei dem benutzten Mapper SHRiMP2 ist bekannt, dass dieser mit größeren
+short Reads Probleme hat und diese nicht effizient mappen kann, er braucht zu lange um diese zu mappen. Deswegen werden nur 100 bp Reads verwendet 
+um zu korrigieren. Das Problem an diesem Set ist nun die Coverage. Es sind nur 48 Gbp 100 bp short Reads vorhanden, dies entspricht einer Coverage von
+16x. Dies ist zu wenig um eine gute Korrektur von PacBio Reads zu bekommen, hinzu kommt dass zu wenig Coverage Probleme beim Mapping machen kann. Es können
+zwei Fälle auftreten. Zum einen kann bei den ersten, nicht ganz so sensitiven Mappings damit zu wenig korrigiert werden, das in den folgenden Schritten zu viel
+nachgeholt werden muss, bei Mappings welche viel sensitiver mappen und somit viel länger brauchen. Ein anderer Fall könnte sein, dass Reads welche aufgrund 
+der geringen Coverage keine Reads abbekommen als "weak" angesehen werden könnten, und für Kontaminationen gehalten werden könnten. Diese würden von proovread
+maskiert werden und in den folgenden Schritten ignoriert werden. Dies würde die Korrektur zwar beschleunigen, es würde aber eine schlechte bis gar keine 
+Korrektur auf diesen Teilen von PacBio Reads geben. 
+\begin{table}[!h]
+\caption[Laufzeiten der Mappings, des 2MB Datensatzes]{\textbf{Laufzeiten der Mappings, des 2MB Datensatzes,} Klar zu erkennen ist, das Laufzeit von Shrimp-pre-1 bis Shrimp-pre3 abnimmt, da in den vorherigen Mappings sehr viel korrigiert wurde.}
+\begin{center}
+\begin{tabular}{lrrrr}
+2MB - IDs & Shrimp-pre1 & Shrimp-pre2 & Shrimp-pre3 & Shrimp-finish\\
+ & [h:m:s] & [h:m:s] & [h:m:s] & [h:m:s]\\
+\hline
+32$_{\text{2}}$ & 15:27:53 & 01:56:42 & 06:04:13 & 12:07:29\\
+32$_{\text{1}}$ & 15:27:50 & 01:56:26 & 06:14:09 & 12:05:21\\
+31$_{\text{2}}$ & 13:16:30 & 01:40:48 & 05:18:19 & 10:27:15\\
+31$_{\text{1}}$ & 13:16:18 & 01:39:43 & 05:21:40 & 10:25:41\\
+19$_{\text{1}}$ & 12:44:24 & 01:44:29 & 06:09:31 & 10:03:20\\
+19$_{\text{2}}$ & 12:42:49 & 01:43:34 & 06:04:52 & 09:56:51\\
+20$_{\text{1}}$ & 13:03:17 & 01:43:51 & 05:55:07 & 10:13:03\\
+20$_{\text{2}}$ & 13:01:29 & 01:42:42 & 05:53:22 & 10:11:04\\
+21$_{\text{1}}$ & 17:24:14 & 02:16:31 & 07:32:05 & 13:43:19\\
+21$_{\text{2}}$ & 17:35:26 & 02:16:38 & 07:35:21 & 13:43:04\\
+Summe & 144:00:10 & 18:41:24 & 62:08:39 & 112:56:27\\
+\end{tabular}
+\end{center}
+\end{table}
+
+\begin{table}[!h]
+\caption[Laufzeiten der Mappings, des 5MB Datensatzes]{\textbf{Laufzeiten der Mappings, des 5MB Datensatzes,} Abbrechen des Jobs nach maximaler Laufzeit von 20 Tagen, deshalb nur bis shrimp-finish gerechnet.}
+
+\begin{center}
+\begin{tabular}{lrrrl}
+5MB - IDs & Shrimp-pre1 & Shrimp-pre2 & Shrimp-pre3 & Shrimp-finish\\
+ & [h:m:s] & [h:m:s] & [h:m:s] & [h:m:s]\\
+\hline
+32$_{\text{2}}$ & 17:59:20 & 07:02:21 & 16:59:22 & 22:19:34\\
+32$_{\text{1}}$ & 18:04:46 & 07:03:12 & 17:32:10 & 22:09:05\\
+31$_{\text{2}}$ & 15:29:32 & 06:05:15 & 14:56:59 & 19:06:39\\
+31$_{\text{1}}$ & 15:31:06 & 06:12:26 & 15:05:03 & 13:47:43\\
+19$_{\text{1}}$ & 14:55:42 & 06:04:35 & 17:00:24 & -\\
+19$_{\text{2}}$ & 14:54:57 & 06:03:24 & 16:52:56 & -\\
+20$_{\text{1}}$ & 15:18:02 & 06:09:09 & 16:41:55 & -\\
+20$_{\text{2}}$ & 15:17:39 & 06:08:39 & 16:35:23 & -\\
+21$_{\text{1}}$ & 20:43:20 & 08:16:25 & 21:19:02 & -\\
+21$_{\text{2}}$ & 20:31:33 & 08:14:23 & 21:30:52 & -\\
+Summe & 168:45:57 & 67:19:49 & 174:34:06 & 77:23:01\\
+\end{tabular}
+\end{center}
+\end{table}
+
+\begin{table}[!h]
+\caption[Laufzeiten der Mappings, des 10MB Datensatzes]{\textbf{Laufzeiten der Mappings, des 10MB Datensatzes,} Nach 20 Tagen Maximaler Laufzeit nur in Shrimp-pre-3 angekommen}
+\begin{center}
+\begin{tabular}{lrrll}
+10MB - ID & Shrimp-pre1 & Shrimp-pre2 & Shrimp-pre3 & Shrimp-finish\\
+ & [h:m:s] & [h:m:s] & [h:m:s] & [h:m:s]\\
+\hline
+32$_{\text{2}}$ & 21:46:13 & 17:23:24 & 48:02:25 & -\\
+32$_{\text{1}}$ & 21:44:52 & 17:26:00 & 49:07:48 & -\\
+31$_{\text{2}}$ & 18:44:15 & 15:00:55 & 30:04:11 & -\\
+31$_{\text{1}}$ & 18:42:56 & 15:03:07 & - & -\\
+19$_{\text{1}}$ & 18:03:03 & 14:43:35 & - & -\\
+19$_{\text{2}}$ & 18:01:00 & 14:39:46 & - & -\\
+20$_{\text{1}}$ & 18:33:40 & 14:58:23 & - & -\\
+20$_{\text{2}}$ & 18:32:53 & 14:59:25 & - & -\\
+21$_{\text{1}}$ & 24:47:20 & 20:05:52 & - & -\\
+21$_{\text{2}}$ & 24:59:18 & 20:14:58 & - & -\\
+Summe & 203:55:30 & 164:35:25 & 127:14:24 & 0\\
+\end{tabular}
+\end{center}
+\end{table}
+Vergleicht man die Laufzeiten der einzelnen Iterationen zwischen den Datensätzen, so zeigt sich das in der ersten Iteration kein großer Zeitunterschied vorhanden ist. 
+Natürlich braucht ein größerer Datensatz länger als ein kleinerer, doch ist sind diese in der ersten Iteration doch noch sehr ähnlich. Erste große Laufzeit Unterschiede zeigen 
+sich in der zweiten Iteration. Dies zeigt das in der ersten Iteration bei allen drei Test Sets viel gemapt und somit korrigiert wird. Im 2 Mb Test Set wird anscheinend so viel
+korrigiert, das in dem Folgenden Mapping kaum noch korrigiert werden muss, weswegen die Zeiten so gering ausfallen im Vergleich zu 5 Mb und 10 Mb, in denen sehr wohl noch viel zu
+korrigieren vorhanden ist. In der dritten Iteration zeigt sich das strikter gemapt wird, da auch hier in dem 2 Mb Testset die Zeiten wieder steigen die benötigt werden. 
+
+\clearpage
+\section{Fragmentierung in PacBio reads, ein Problem beim trimmen}
+\label{sec-7}
+\subsection{Fragmentierung und Trimmen nicht korrigierter Stellen}
+\label{sec-7-1}
+Der Nutzen von PacBio Reads ist stark von ihrer Länge abhängig, wird diese zu kurz sind sie nicht mehr nützlich. Proovread trimmt und fragmentiert PacBio Reads an
+Stellen die nicht korrigiert werden konnten. Da dies meist zu fehlerhafte Bereiche sind, müssen diese aus dem Assembly herausgenommen werden, da 
+sonnst ein Fehler mitgenommen wird, der vermieden werden könnte. Dieses trimmen allerdings verkürzt die PacBio Reads, dadurch dass solche Stellen häufig
+mitten in diesen vorkommen werden so aus einem \textasciitilde{}8 kbp Reads zwei \textasciitilde{}4 kbp Reads. Um die Fragmentierung zu verbessern kann an verschiedenen Optionen des
+Programms gedreht werden. So kann dem SeqChunker verschiedene Teilungsgrößen angegeben werden um in den ersten Schritten vielleicht etwas mehr oder weniger zu 
+mappen um durch sensitiveres mappen im späteren Verlauf bzw. nicht ganz so sensitives mappen im Vorfeld, fehlerhaftere Stellen eher korrigiert werden. 
+Eine weitere Möglichkeit bietet das Teilprogram sam2cns von proovread. 
+
+\subsection{sam2cns - proovreads Hauptmodul}
+\label{sec-7-2}
+Die in den Mappings erzeugten SAM Dateien geben nur an welcher short Read an welcher Stelle gemapt hat. Um nun eine Korrektur zu bekommen muss aus allen
+auf die gleiche Base gemapten short Reads eine Konsensus Sequenz berechnet werden. Dies übernimmt sam2cns.
+Sam2cns überprüft jede einzelne Base, schaut sich an welche Base ursprünglich dort war, und welche Basen die einzelnen an die stelle gemapten short Reads
+haben. Nun wird berechnet welches die wahrscheinlich richtigere Base ist. Hierzu wird einfach gezählt welche Base häufiger vorkommt. 
+Dieses Programm errechnet nicht nur einen Konsensus, er maskiert auch die Bereiche die bereits korrigiert wurden um eine Datei der PacBio Reads zu erstellen
+welche in den Folgenden Mapping benutzt wird. Eine weitere Option in sam2cns ist "mask-weak-reads" und "ignore-weak-reads". Diese zwei Optionen 
+sind in erster Hinsicht programmiert worden um Zeit zu sparen. Diese beiden Optionen führen dazu, dass Reads und Teile welche keine short Reads bekommen
+zusätzlich maskiert werden. Dies ist in folgender Hinsicht sinnvoll, zum einen wird hierdurch Zeit gespart, da diese stellen nicht in jeder Iteration wieder
+untersucht werden müssen. Ein weiterer großer Vorteil ist der, dass diese Stellen entweder meist zu fehlerhaft sind und somit nicht im assembly zu verwenden sind.
+Oder es sind Kontaminationen von anderen Individuen welche beim Sequenzieren in die Proben gelangt sind, häufig E.coli Bakterien oder H.sapiens Verunreinigungen.
+Diese Kontaminationen lassen sich nie vermeiden, lassen sich aber durch sam2cns herausfiltern. 
+\begin{figure}[!hb]
+\includegraphics[width=.9\linewidth]{//home/s229502/Documents/consens.png}
+\caption[Berechnen des Consensus]{\textbf{Berechnen des Consensus}, Mit Hilfe von sam2cns wird aus den PacBio Reads und den Illumina Reads ein Konsensus Read erstellt, welcher für die nächsten Mappings maskiert und benutzt wird}
+\end{figure}
+\subsection{Unterschiedliche Fragmentierung in unterschiedlichen Versionen}
+\label{sec-7-3}
+Es gibt z.Zt. mehrere Versionen von proovread. Diejenige die publiziert wurde (1.01) und eine weiterentwickelte (1.03) diese unterscheiden sich in Geschwindigkeit
+sowie im Ergebnis der Korrektur. Es galt diese Unterschiede ausfindig zu machen und die Versionen anzugleichen, sodass die etwas langsamere 1.03 wieder auf 
+das Geschwindikeitsniveau von 1.01 kommt. Zunächst müssen die einzelnen Teile von proovread im Quellcode angesehen und diese zu verstanden werden. Und dann die 
+beiden Versionen abzugleichen und den Fehler zu finden, der 1.03 langsamer arbeiten lies als 1.01.
+Es wurden einzelne Parameter geändert, da die Standard Einstellungen sich in beiden Versionen unterschieden. Einstellungen wie Fragmentierungsgröße
+bei den einzelnen iterativen Mappings wurden angeglichen und optimiert. 
+Es stellte sich heraus, dass genau jenes Modul, welches Zeit sparen sollte, nämlich "mask-weak-reads" und "ignore-weak-reads" dafür sorgte das 1.03 
+langsamer läuft als 1.01. In der Zeit des Programmieren wurde in proovread der Aufruf von sam2cns verändert. Diese kleine Änderung beinhaltete auch das Ändern 
+der Parameter von "mask-weak-reads" und "ignore-weak-reads", diese wurden in 1.03 auf Null gesetzt. In 1.01 wurden diese nicht speziell aufgerufen und blieben somit 
+auf den Standard Einstellungen. Diese liegen bei 20, dies bedeutet das long Reads, auf die nicht min. 20 short Reads mappen als "weak" angesehen werden, und dann maskiert werden.
+Dies führte dazu, dass in 1.01 in den Folgenden Mapping weniger Reads vorhanden waren die korrigiert werden mussten. Auf einem E.coli Datensatz machte dieser
+Zeitverlust ca. fünf Minuten aus. Auf einem größeren Datensatz, wie etwa ein A.Thaliana Genom, machte dies mehrere Tage Rechenzeit Unterschied aus. 
+Es zeigt sich das "mask-weak-reads" und "ignore-weak-reads", besonders auf großen Datensätzen eine große Zeitersparnis ausmachen, wenn diese Kontaminationen ausschalten
+und somit den Datensatz verkleinern. 
+
+\subsection{Heraus trimmen - genug, zu viel oder zu wenig?}
+\label{sec-7-4}
+Jedes Heraus getrimmte Stück aus einem PacBio Reads verkleinert den effektiven nutzen des Längen Vorteils von PacBio Reads. Deswegen ist es erstrebenswert 
+solch eine Lücke in einem Reads nur zu öffnen wenn dies auch unbedingt notwendig ist. Es gibt mehrere Fälle in denen eine solche Lücke geöffnet werden kann
+und wie das öffnen solcher Lücken reduziert werden kann.
+\subsubsection{Fall 1: Kein short Read Support}
+\label{sec-7-4-1}
+Der erste Fall indem eine solche Lücke geöffnet wird, ist wenn der Read hier keinen short Read Support hat. Dies kann mehrere Ursprünge haben, als erstes
+könnte kein short Reads für diesen Teil des Genom existieren, da er nicht sequenziert wurde, auch bei einer Abdeckung von 50x kann es vorkommen das bestimmte 
+Stellen gar nicht abgedeckt sind. Passiert dies, könnte es sich auch um eine Verunreinigung 
+in den PacBio reads handlen, der natürlich keinen short Read support hat. Diese sollte heraus getrimmt werden, da sie einen Fehler darstellt. 
+Solche Stellen zu korrigieren, wenn es sicher um  keine Kontamination handelt, ist schwierig bis unmöglich. Ist der nicht supportete Bereich nur zu fehlerhaft, das keine short Reads
+mappen so kann durch größere short Reads, welche einen größeren Bereich abdecken evtl. eine Korrektur erreicht werden. Ansonsten kann nur durch neu Sequenzieren
+von short Reads ein solcher Fehler behoben werden.
+\begin{figure}
+\includegraphics[width=.9\linewidth]{//home/s229502/AtGen_Gap/Chr2_9,479,014-9,479,385_support.png}
+\caption[IGV Aufnahme: Heraus trimmen aufgrund von zu wenig short Read Support]{\textbf{IGV Aufnahme: Heraus trimmen aufgrund von zu wenig short Read Support}Zu sehen ist in der ersten Zeile die korrigierten Reads, also den Output von proovread, in der zweiten Zeile, die rohen PacBio Reads. Wie man erkennen kann mit vielen Fehlern im Vergleich zum Referenzgenom (zu erkennen an den gefärbten Basen und Violetten Klammern, welche Insertionen darstellen). In der Dritten Spalte die gemapten Illumina short reads. Sowie in der Letzten spalte die ungetrimmten aber bereits korrigierten PacBio reads, um zu vergleichen wo getrimmt wurde  und wo nicht.Es ist zu erkennen das aufgrund des geringen Supports an short Reads (~4) und an einer kleinen Stelle gar keine, hier getrimmt wurde. }
+\end{figure}
+
+\subsubsection{Fall 2: Zu wenig Coverage - gute Qualität}
+\label{sec-7-4-2}
+Um zu entscheiden ob eine Korrektur sinnvoll ist, berechnet sam2cns den Konsensus aus der Qualität der short Read Base, und der Coverage auf dieser Base.
+Nun kommt es vor dass Bereiche nicht sehr hoch gecovert werden (\textasciitilde{}3 - 6 short reads), diese aber auf dieser Base eine sehr hohe Qualität haben (QS = 40). 
+Nun stellt sich hier die Frage ob diesen short Reads vertraut werden sollte oder nicht. Bisher werden stellen mit zu geringer Coverage aber dennoch guter 
+Qualität heraus getrimmt. Um zu entscheiden ob diesen nun zu unrecht misstraut wird oder nicht sind weitere Untersuchungen zu tätigen.
+
+
+\subsubsection{Fall 3: Viel Coverage - schlechte Qualität}
+\label{sec-7-4-3}
+Eine weitere Möglichkeit warum eine Lücke geöffnet wird, ist die, dass zwar sehr viele short Reads auf den PacBio Read mappen, diese aber an dieser Stelle
+eine niedrige bis schlechte Qualität haben. Beim durchsuchen der Mappings mit IGV, welche angefertigt wurden um das fragmentieren zu untersuchen (Mapping gegen ein Referenzgenom von A.thaliana), vielen mehrerer 
+dieser Stellen auf. Es ist zwar viel Coverage vorhanden dennoch trimmt proovread an solchen Stellen. Diese Stellen müssen genauer untersucht werden. Da dies
+per Hand und suchen in IGV zu viel Aufwand ist, wird ein Programm geschrieben welches BED bzw. COV Dateien untersucht. Die COV Files wurden mit genomeCoverageBed erzeugt
+und eine Datei erstellt welche folgende Informationen bereitstellt. Lokalisation - Coverage korrigierter Reads (getrimmt) - Coverage korrigierter Reads (ungetrimmt) - Coverage 
+short Reads. Mit einem kleinen Programm werden nun die Stellen herausgesucht an denen keine Coverage an getrimmten Reads ist, aber Coverage an ungetrimmten Reads, sowie 
+Support an short Reads. Dies wurde auf einem A.Thaliana Datensatz überprüft. Es werden insgesamt 119667750 Stellen (Referenz Genom) untersucht. Von diesen sind 336551 Spots 
+getrimmt worden obwohl es genug Short reads Support gibt. Dies erscheint nicht viel dennoch sollte dies weiter überprüft werden um zu evaluieren ob hier eine Optimierung statt finden kann.
+\begin{figure}
+\includegraphics[width=.9\linewidth]{//home/s229502/AtGen_Gap/Chr2:11,518,719-11,519,345_quality.png} 
+\caption[IGV Aufnahme: Heraus getrimmter Spot, obwohl short Reads Support vorhanden ist.]{\textbf{IGV Aufnahme: Heraus getrimmter Spot, obwohl short Read Support vorhanden ist,} Zu sehen ist eine Heraus getrimmte Stelle, obwohl mehr als 15 short Reads an Support vorhanden sind. Obwohl der ungetrimmte korrigierte Read gut auf die Referenz mapped, wird hier ein Stück heraus getrimmt.}
+\end{figure}
+
+\begin{figure}
+\includegraphics[width=.9\linewidth]{//home/s229502/AtGen_Gap/Chr1:4,680,549-4,680,987_hcov_loqua.png} 
+\caption[IGV Aufnahme: Hohe Coverage, niedrige Qualität]{\textbf{IGV Aufnahme:Hohe Coverage, niedrige Qualität,}zu sehen, ist eine sehr hohe Coverage (>150), aber eine sehr schlechte Qualität, zu sehen an der weißen Farbe der short Reads. }
+\end{figure}
+\clearpage
+\section{Schließen der Lücken - Vermeidung von nicht notwendigen Trimmen}
+\label{sec-8}
+\subsection{Suchen nach Lücken}
+\label{sec-8-1}
+Um proovread zu optimieren und zu verbessern müssen die Lücken gefunden werden welche nicht notwendiger Weise geöffnet werden.
+Also Lücken für die es keinen offensichtlichen Grund gibt. Einige Stellen die gefunden wurden scheinen trotz eines guten Supports und guter Qualität
+heraus getrimmt zu werden, diese werden zuerst untersucht. Es könnte sich bei diesen Stellen um Chimären handelt.
+Chimären entstehen dann wenn bei der Erstellung der SMRT library die long Reads falsch ligieren. Diese Chimären sind also zwei oder mehrere Reads welche nicht zusammengehören
+aber zusammen als ein Read dargestellt werden. Diese Reads sind somit nicht geeignet in einem Genomassembly verwendet zu werden, da Teile an falschen Stellen eingebaut werden.
+
+
+\subsection{Unnützes trimmen oder getrimmte Chimäre?}
+\label{sec-8-2}
+Proovread hat eine Option, welche versucht Chimären ausfindig zu machen und diese heraus zu trimmen. 
+Chimären sind Artefakte welche beim Sequenzieren entstehen. Chimären entstehen durch misligation während der SMRT "library" Erstellung der 
+long Reads. Dieses trimmen ist durchaus wichtig da mehr als 1\% der rohen SMRT single pass reads Chimären sind\footnote{Fichot, E. B., and Norman, R. S. (2013).
+Microbial phylogenetic profiling eith the pacific biosiences sequencing platform. Microbiome}. 
+Um herauszufinden ob wirklich eine Chimäre vorliegt kann nicht nur auf short Read Support und Coverage vertraut werden. Um zu überprüfen ob
+wirklich eine Chimäre vorliegt muss die Entropie berechnet werden, da diese ein guter Indikator für Chimären sind. Zum Anderen werden die gemapten
+short Reads in Blöcke eingeteilt, hierzu wird der Mittelpunkt des jeweiligen reads genommen und in einen Block gesteckt. Ist eine Chimäre vorhanden 
+zeigt sich dies in einer sehr niedrigen Block Coverage an dieser stelle. 
+Um zu sehen ob proovread eine Chimäre getrimmt hat, wird proovread ohne das Chimären Detektion Tool gestartet. Die hierbei herauskommenden Reads wurden
+zwar getrimmt, aber ohne den Einfluss von Chimären. Auch diese Datei wurde zum untersuchen auf ein Referenzgenom gemapt und mit IGV genauer untersucht. 
+Nach dem Untersuchen mehrerer von proovread heraus getrimmten Chimären, wird der Schluss gefasst, dass die meisten dieser zurecht heraus getrimmt wurden. Da alle offensichtlichen
+Anzeichen an eine Chimäre erfüllt werden.
+\clearpage
+
+\subsection{Coverage - Accuracy - Quality}
+\label{sec-8-3}
+Um herauszufinden ob die restlichen Lücken zu recht geöffnet wurden, bzw. ob diese evtl. durch das Ändern von Parametern geschlossen werden können, wurde ein Programm
+geschrieben welche aus den Mappings die Cigar Strings benutzt um aus den korrigierten reads die Accuracy, Coverage und Quality der einzelnen Basen heraus zu filtern.
+So kann bewertet werden ob, evtl Stellen welche eine niedrige Coverage haben dennoch vertraut werden kann, wenn sich herausstellt das diese, auch mit niedriger Coverage,
+gut korrigiert wurden. Leider kann hierüber noch nichts ausgesagt werden, da die Auswertung dieses Ansatzes zeitlich nicht mehr in den Zeitrahmen der Bachelor Thesis gepasst hat.
+\clearpage
+
+
+\section{Fazit}
+\label{sec-9}
+\subsection{Korrektur von PacBio reads, ein Aufwand der sich lohnt?}
+\label{sec-9-1}
+Mit fehlerhaften PacBio Reads, ein Genom gut, fehlerfrei und vollständig zu assemblieren ist schwierig. Dies aber nur mit Illumina reads zu tun, ist auch
+nicht einfach. Die Korrektur von PacBio Reads mit proovread funktioniert effizient. Die dabei entstehenden korrigierten PacBio Reads sind zu 99,9\% fehlerfrei
+dazu schafft man es mit jedem herkömmlichen Computer eine Korrektur zu berechnen. 
+Durch die einfache Bedienung der Korrektur sollte die Akzeptanz gegenüber diesen Reads steigen, da die PacBio Reads durch diese Korrektur ihren großen Vorteil erst richtig
+unter Beweis stellen können, ohne einen großen Nachteil zu haben, außer dass es ein wenig Zeit dauert Illumina Daten zu verwenden um
+die PacBio reads zu korrigieren. 
+Sind die PacBio Daten erst einmal korrigiert, kann sich dem eigentlichen Assembly Problem gewitmet werden. 
+
+\subsection{Weitere Verbesserungsmöglichkeiten - Ein Ausblick}
+\label{sec-9-2}
+Zunächst wird das Modell welches der Überprüfung der Basen dient, und entscheidet ob einer Base getraut wird oder nicht, von sam2cns angepasst, 
+sobald die Daten aus \ref{sec-8-3} ausgewertet sind. 
+Ein weiteres großes Problem von Proovread sind die Stellen die nicht korrigiert werden können, da sie zu fehlerhaft sind, und somit keine Illumina
+short Reads darauf mappen können. Eine bereits versuchte Idee war es flashed reads zu verwenden, welche aufgrund von Laufzeit Problemen nicht
+evaluiert werden konnte. Es gibt aber noch andere Möglichkeiten diese unkorrigierten Spots abzudecken. So könnten zum einen paired end reads verwendet werden.
+Dies sind Reads welche von zwei Seiten aus Sequenziert wurden und man die genaue insert size, also die Größe zwischen den beiden Sequenteilen, kennt.
+So könnte man den einen Teil der Sequenz strikt auf die PacBio Sequenzen mappen. Man würde dann die passenden Gegenstücke, so gegen die PacBio Reads halten
+dass die richtige insert size erfüllt ist. So könnten evtl. Bereiche an die sonnst keine Reads mappen im Nachhinein abgedeckt werden.
+
+
+
+\clearpage
+\section{References}
+\label{sec-10}
+\begin{enumerate}
+\item Hackl, T., Hedrich, R., Schultz, J., and Förster, F. (2014).
+proovread: large-scale high accuracy PacBio correction through iterative short read consensus. Bioinformatics
+
+\item Magoc, T., and Salzberg, S. (2011).
+FLASH: Fast length adjustment of short reads to improve genome assemblies. Bioinformatics
+
+\item Rumble, S. M., Lacroute, P., Dalca, A. V., Fiume, M., Sidow, A., and Brudno, M. (2009). 
+SHRiMP: Accurate Mapping of Short Color-space Reads.
+
+\item Wu, T. D., and Watanabe, C. K. (2005).
+GMAP: a genomic mapping and alignment program for mRNA and EST sequences. Bioinformatics
+
+\item Wu, T. D., and Nacu, S. (2010).
+Fast and SNP-tolerant detection of complex variants and splicing in short reads. Bioinformatics
+
+\item \texttt{www.gnu.org/software/emacs/}
+
+\item Thorvaldsdóttir, H., Robinson, J. T., and Mesirov, J. P. (2012).
+Integrative Genomics Viewer (IGV): high-performance genomics data visualization and exploration. Bioinformatics
+
+\item Robinson, J. T., Thorvaldsdóttir, H., Winckler, W., Guttman, M., Lander, S.E., Getz, G., and Mesirov, J. P. (2011). 
+Integrative Genomics Viewer. Nature Biotechnology
+
+\item \url{http://samtools.github.io/hts-specs/SAMv1.pdf}
+
+\item Fichot, E. B., and Norman, R. S. (2013).
+Microbial phylogenetic profiling eith the pacific biosiences sequencing platform. Microbiome
+
+\item Koren S., et al. (2012) 
+Hybrid error correction and de novo assembly of single-molecule sequencing reads. Nat Biotechnol.
+
+\item Au, K.F., Underwood, J.G., Lee, L., and Wong, W.H. (2012).
+Improving pacbio long reads accuracy by short read alignment. PLoS ONE.
+
+\item Gnerre S., Maccallum I., Przybylski D., Ribeiro F.J., Burton J.N., (2011)
+High-quality draft assemblies of mammalian genomes from massively paallel sequence data. Proc Natl Acad Sci USA
+
+\item Marcais G., and Kingsford C. (2011)
+A fast, lock-free approach for efficient parallel counting of occurrences of k-mers. Bioinformatics
+\end{enumerate}
+\clearpage
+
+\section{Danksagungen}
+\label{sec-11}
+
+Mein Dank gilt meinen Betreuern Hackl Thomas, Förster Frank, sowie Schultz Jörg. \newline
+Unerlässlich waren mir meine Kollegen Weiß Clemens, Ankenbrand Markus, Terhoeven \newline
+Niklas und Keller Anna-Lena  welche gerne mit Rat und Tat zur Stelle waren. \newline
+Der nächste Dank geht an all diejenigen, welche mir zur Zeit der vorherigen Semester \newline
+offen zur Seite standen. Speziell möchte ich hier Pfeifer Felix, Bötzl Fabian, sowie \newline
+Mergental Simon, Sisario Dmitri, und Weiglein Alice erwähnen, die immer ermutigend \newline
+und unterstützend waren. Besonderer Dank geht an meine ganze Familie, als auch \newline
+natürlich an meine langjährigen Freunde, besonders an Piekar "Löwe" Martin, \newline
+der es immer schafft mich Philosophisch zurecht zu weisen, sowie Berberich Simon, \newline
+Ort Teresa, Wagner "Drachy" Janine und Krämer Peter, für dass sie immer für \newline
+mich da waren, mir halfen wo es nur ging und sich nur seltenst darüber beschweren. \newline
+Unter anderem geht weiterer Dank an, Percy Spencer dem Erfinders der Microwelle. \newline
+Nicht zu vergessen meine ehemaligen Lehrer Vogt Markus, sowie Dürr Thomas, \newline 
+die beide meine Begeisterung an der Biologie und Bioinformatik geweckt haben. \newline
+Offensichtlicher Dank geht natürlich an unseren "guten" Kaffee.  \newline
+
+
+\clearpage
+\section{Abbildungs- und Tabellenverzeichnis}
+\label{sec-12}
+\listoffigures
+
+\listoftables
+
+\clearpage
+
+\section{Anhang}
+\label{sec-13}
+
+CD mit digitaler Kopie der Bachelor Thesis, und proovread Modul  
+\clearpage
+
+\section*{Eigenständigkeitserklärung}
+ERKLÄRUNG gemäß ASPO § 21 Abs. 10\\[10mm]
+Hiermit versichere ich, dass ich vorliegende Arbeit selbstständig verfasst, keine anderen als
+die angegebenen Quellen und Hilfsmittel benutzt und die Arbeit bisher oder gleichzeitig
+keiner anderen Prüfungsbehörde unter Erlangung eines akademischen Grades
+vorgelegt habe.\\[20mm]
+Würzburg, \today \hfill Simon Pfaff
+\clearpage
+% Emacs 24.3.1 (Org mode 8.2.6)
+\end{document}
